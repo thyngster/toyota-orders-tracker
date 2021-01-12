@@ -53,3 +53,6 @@ You have access to the current code, feel free to peek at it, if you want to see
 # ADVISE
 
 I did this tool for my own usage, and when my car arrives, I won't be able to keep this updates. I'm sharing it as open source on Github in case anyone want to continue the work. 
+
+This may break or not work for some users, I only have access to my own order
+so it's hard to do any more testing at my side.
