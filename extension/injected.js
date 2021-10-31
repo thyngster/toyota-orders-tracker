@@ -2,7 +2,7 @@
     // This functions opens a full modal, with all the info
     function showTrack(id) {
         window.location = '#/publish/search'
-        setTimeout(function() {
+        setTimeout(function () {
             $('[data-tab="pane-search"]').text('Toyota Tracker');
             $('[data-tab="pane-dealer"]').remove();
             $('section#searchcomponent').empty();
@@ -177,7 +177,9 @@
                 </tr>
                 </table>
                 `
-                        var steps = `<hr /><h2>Pasos</h2><table border="1">
+
+            if (window._tyt[id].intermediateDeliveries != null) {
+                var steps = `<hr /><h2>Pasos</h2><table border="1">
                 <tr>
                 <td>Código</td>
                 <td>Nombre</td>
@@ -190,9 +192,8 @@
                 <td>Long</td>
                 <td>Visitado</td>
                 </tr>`
-    
-            Object.values(window._tyt[id].intermediateDeliveries).forEach(e=>{
-                steps = steps + `
+                Object.values(window._tyt[id].intermediateDeliveries).forEach(e => {
+                    steps = steps + `
                     <tr>
                     <td>${e.locationCode}</td>
                     <td>${e.locationName}</td>
@@ -205,24 +206,32 @@
                     <td>${e.locationLongitude}</td>
                     <td>${e.isVisited}</td>
                     </tr>
-        `
+                    `
+                }
+                )
+                steps = steps + '</table>'
+                $('section#searchcomponent').html(datos + steps)
             }
-            )
-            steps = steps + '</table>'
-            $('section#searchcomponent').html(datos + steps)
+            else {
+                steps = `
+                </br>
+                <h3>Aún no hay datos publicados relacionados a la ubicación y entrega del vehículo.</h3>
+                `
+                $('section#searchcomponent').html(datos + steps)
+            }
+
         }, 250)
-    
     }
-        
+
     window._tyt = {}
     const origOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function(method, url) {
+    XMLHttpRequest.prototype.open = function (method, url) {
         var _url = url;
-        this.addEventListener('load', function() {
-            if(_url.match(/\/api\/orderTracker\/orders\/(.+)$/)){
-                if(this.responseText){
+        this.addEventListener('load', function () {
+            if (_url.match(/\/api\/orderTracker\/orders\/(.+)$/)) {
+                if (this.responseText) {
                     var data = JSON.parse(this.responseText)[0];
-                    if(!window._tyt[data.orderId]) window._tyt[data.orderId] = {
+                    if (!window._tyt[data.orderId]) window._tyt[data.orderId] = {
                         orderId: data.orderId,
                         isComplete: data.isComplete,
                         orderDate: data.associationDate,
@@ -231,24 +240,24 @@
                         type: data.type
                     }
                 }
-            }    
-            if(_url.match(/\/api\/orderTracker\/user\/(.+)\/orderStatus\/(.+)/)){
-                if(this.responseText){
+            }
+            if (_url.match(/\/api\/orderTracker\/user\/(.+)\/orderStatus\/(.+)/)) {
+                if (this.responseText) {
                     var orderId = _url.match(/\/api\/orderTracker\/user\/(.+)\/orderStatus\/(.+)/)[2];
                     var orderStatusData = JSON.parse(this.responseText);
-                    window._tyt[orderId] = Object.assign(window._tyt[orderId],orderStatusData);
-                    $(document).on('click', '[data-test-id^="purchased-vehicle-tile"]', function(e) {
+                    window._tyt[orderId] = Object.assign(window._tyt[orderId], orderStatusData);
+                    $(document).on('click', '[data-test-id^="purchased-vehicle-tile"]', function (e) {
                         var orderId = String($(this).data('testId').split('-').reverse()[0]);
                         console.log(orderId)
-                        setTimeout(function() {
+                        setTimeout(function () {
                             showTrack(orderId)
                         }, 1000)
                     });
-                    
-                }                
+
+                }
             }
-            
-        });        
+
+        });
         origOpen.apply(this, arguments);
     };
 }))();
