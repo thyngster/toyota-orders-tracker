@@ -206,7 +206,7 @@
                 )
             }
             steps = steps + '</table>'
-            $('section#searchcomponent').html(datos + steps)
+            $('#orDashboard').html(datos + steps)
         }, 250)
     
     }
