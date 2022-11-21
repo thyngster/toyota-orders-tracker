@@ -218,14 +218,19 @@
         this.addEventListener('load', function() {
             if(_url.match(/\/api\/orderTracker\/orders\/(.+)$/)){
                 if(this.responseText){
-                    var data = JSON.parse(this.responseText)[0];
-                    if(!window._tyt[data.orderId]) window._tyt[data.orderId] = {
-                        orderId: data.orderId,
-                        isComplete: data.isComplete,
-                        orderDate: data.associationDate,
-                        orderStatus: data.status,
-                        brand: data.brand,
-                        type: data.type
+                    var data_array = JSON.parse(this.responseText);
+                    for (i = 0; i < data_array.length; i++) {
+
+                      var data = data_array[i];
+  
+                      if(!window._tyt[data.orderId]) window._tyt[data.orderId] = {
+                            orderId: data.orderId,
+                            isComplete: data.isComplete,
+                            orderDate: data.associationDate,
+                            orderStatus: data.status,
+                            brand: data.brand,
+                            type: data.type
+                        }
                     }
                 }
             }    
@@ -240,6 +245,7 @@
                         setTimeout(function() {
                             showTrack(orderId)
                         }, 1000)
+                
                     });
                     
                 }                
