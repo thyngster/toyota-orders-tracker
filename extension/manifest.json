@@ -1,5 +1,5 @@
 {
-    "manifest_version": 2,
+    "manifest_version": 12.0.8585.18879,
     "name": "Toyota CHR Order Tracker", 
     "description": "Toyota CHR Order Tracker",
     "version": "1.0.0",
