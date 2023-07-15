@@ -1,17 +1,30 @@
 {
-    "manifest_version": 2,
-    "name": "Toyota Advanced Order Tracker", 
-    "description": "Toyota Advanced Order Tracker",
+    "manifest_version": 3,
+    "name": "Toyota Order Tracker", 
+    "description": "This extension brings all the information that is contained in the Toyota page",
     "version": "1.0.0",
-    "author": "David Vallejo",
+    "author": "JotaGarciaz",
+    "action": {
+        "default_title": "Toyota Order Tracker",
+        "default_icon": "icon.png"
+    },
     "permissions": [
-        "activeTab",
-        "https://*/*"
+        "activeTab"
      ],
+     "host_permissions": [
+            "https://*/*",
+            "http://*/*"
+    ],
+    "optional_host_permissions": [
+            "*://*/*"
+    ],
     "content_scripts" : [{
         "matches": ["http://*/*", "https://*/*"],
         "js" : ["content.js"],
         "run_at": "document_start"
     }],     
-    "web_accessible_resources": ["injected.js"]     
+    "web_accessible_resources": [
+        {"resources":["injected.js"],
+        "matches": ["http://*/*", "https://*/*"]}
+    ]
 }

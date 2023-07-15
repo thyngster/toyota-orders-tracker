@@ -1,7 +1,9 @@
 ((() => {
     // This functions opens a full modal, with all the info
     function showTrack(id) {
-        window.location = '#/publish/search'
+        if (window.location.hash.match(/^#\/purchasedCars\//)) {
+            window.location = window.location.hash;
+        }
         setTimeout(function() {
             $('[data-tab="pane-search"]').text('Toyota Tracker');
             $('[data-tab="pane-dealer"]').remove();
@@ -239,14 +241,13 @@
                     var orderId = _url.match(/\/api\/orderTracker\/user\/(.+)\/orderStatus\/(.+)/)[2];
                     var orderStatusData = JSON.parse(this.responseText);
                     window._tyt[orderId] = Object.assign(window._tyt[orderId],orderStatusData);
-                    $(document).on('click', '[data-test-id^="purchased-vehicle-tile"]', function(e) {
-                        var orderId = String($(this).data('testId').split('-').reverse()[0]);
+
+                       
                         console.log(orderId)
                         setTimeout(function() {
                             showTrack(orderId)
                         }, 1000)
                 
-                    });
                     
                 }                
             }
