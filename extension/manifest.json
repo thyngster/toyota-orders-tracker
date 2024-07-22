@@ -1,17 +1,21 @@
 {
-    "manifest_version": 2,
-    "name": "Toyota Advanced Order Tracker", 
+    "manifest_version": 3,
+    "name": "Toyota Advanced Order Tracker",
     "description": "Toyota Advanced Order Tracker",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "author": "David Vallejo",
     "permissions": [
-        "activeTab",
-        "https://*/*"
-     ],
-    "content_scripts" : [{
+        "activeTab"
+    ],
+    "content_scripts": [{
         "matches": ["http://*/*", "https://*/*"],
-        "js" : ["content.js"],
+        "js": ["content.js"],
         "run_at": "document_start"
-    }],     
-    "web_accessible_resources": ["injected.js"]     
+    }],
+    "web_accessible_resources": [
+        {
+            "resources": ["injected.js"],
+            "matches": ["<all_urls>"]
+        }
+    ]
 }
