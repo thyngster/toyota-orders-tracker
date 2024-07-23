@@ -45,12 +45,12 @@
                         <td>Estado Pedido</td>
                         <td>${window._tyt[id].orderStatus}</td>
                         <td>Pedido Finalizado</td>
-                        <td>${window._tyt[id].isComplete}</td>
+                        <td>${window._tyt[id].isComplete ? "Si" : "No"}</td>
                     </tr>
         
                     <tr>
                         <td>¿Está retrasado?</td>
-                        <td>${window._tyt[id].currentStatus.isDelayed ? "Yes" : "No"}</td>
+                        <td>${window._tyt[id].currentStatus.isDelayed ? "Si" : "No"}</td>
                         <td>Código de daño</td>
                         <td>${window._tyt[id].currentStatus.damageCode === "" ? "Sin Daños" : window._tyt[id].currentStatus.damageCode}</td>
                     </tr>
@@ -64,9 +64,9 @@
         
                     <tr>
                         <td>¿Disponible Fecha de Entrega?</td>
-                        <td>${window._tyt[id].etaToFinalDestination}</td> 
+                        <td>${window._tyt[id].etaToFinalDestination ? "Si" : "No"}</td>
                         <td>Fecha de entrega estimada</td>
-                        <td>${window._tyt[id].currentStatus.estimatedDeliveryToFinalDestination}</td>
+                        <td>${window._tyt[id].currentStatus.estimatedDeliveryToFinalDestination ? window._tyt[id].currentStatus.estimatedDeliveryToFinalDestination : "No disponible"}</td>
                     </tr>    
                 </table>
                     
@@ -83,7 +83,7 @@
                     </colgroup>
                     <tr>
                         <td>Brand</td>
-                        <td>${window._tyt[id].orderDetails.brand}</td>
+                        <td>${window._tyt[id].orderDetails.brand ? window._tyt[id].orderDetails.brand : "No disponible"}</td>
                         <td>Modelo</td>
                         <td>${window._tyt[id].orderDetails.vehicleModel}</td>
                     </tr>
@@ -111,21 +111,21 @@
         
                     <tr>
                         <td>VIN</td>
-                        <td>${window._tyt[id].vin}</td>
+                        <td>${window._tyt[id].vin ? window._tyt[id].vin : "No disponible"}</td>
                         <td>URN</td>
-                        <td>${window._tyt[id].urn}</td>
+                        <td>${window._tyt[id].urn ? window._tyt[id].urn : "No disponible"}</td>
                     </tr>
         
                     <tr>
                         <td>Katashiki</td>
-                        <td>${window._tyt[id].orderDetails.fullKatashiki} <a href="https://en.wikipedia.org/wiki/Toyota_model_codes" target="_blank">[+]</a></td>
+                        <td>${window._tyt[id].orderDetails.fullKatashiki ? window._tyt[id].orderDetails.fullKatashiki : "No disponible"} <a href="https://en.wikipedia.org/wiki/Toyota_model_codes" target="_blank">[+]</a></td>
                         <td>SSN</td>
-                        <td>${window._tyt[id].orderDetails.ssn}</td>
+                        <td>${window._tyt[id].orderDetails.ssn ? window._tyt[id].orderDetails.ssn : "No disponible"}</td>
                     </tr>
         
                     <tr>
                         <td>NMSC</td>
-                        <td>${window._tyt[id].orderDetails.nmsc}</td>
+                        <td>${window._tyt[id].orderDetails.nmsc ? window._tyt[id].orderDetails.nmsc : "No disponible"}</td>
                     </tr>
                 </table>
         
@@ -157,7 +157,7 @@
                         <td>Pais</td>
                         <td>${window._tyt[id].dealerDetails.countryCode}</td>
                         <td>Dealer Code</td>
-                        <td>${window._tyt[id].dealerDetails.dealerCode}</td>
+                        <td>${window._tyt[id].dealerDetails.dealerCode ? window._tyt[id].dealerDetails.dealerCode : "No disponible"}</td>
                     </tr>
 
                     <tr>
@@ -195,8 +195,8 @@
                         <td>${e.locationName}</td>
                         <td>${e.destinationType}</td>
                         <td>${e.countryCode}</td>
-                        <td>${e.estimatedArrivalDate}</td>
-                        <td>${e.leftLocationOn}</td>
+                        <td>${e.estimatedArrivalDate ? e.estimatedArrivalDate : 'No disponible'}</td>
+                        <td>${e.leftLocationOn ? e.leftLocationOn : 'No disponible'}</td>
                         <td>${e.transportMethod}</td>
                         <td>${e.locationLatitude}</td>
                         <td>${e.locationLongitude}</td>
@@ -239,13 +239,11 @@
                     var orderId = _url.match(/\/api\/orderTracker\/user\/(.+)\/orderStatus\/(.+)/)[2];
                     var orderStatusData = JSON.parse(this.responseText);
                     window._tyt[orderId] = Object.assign(window._tyt[orderId],orderStatusData);
-                    $(document).on('click', '[data-test-id^="purchased-vehicle-tile"]', function(e) {
-                        var orderId = String($(this).data('testId').split('-').reverse()[0]);
-                        console.log(orderId)
+                    $(document).on('click', '[data-test-id^="vehicle-overview-item"]', function(e) {
                         setTimeout(function() {
+                            var orderId = String(window.location.href.split('/').reverse()[0]);
                             showTrack(orderId)
                         }, 1000)
-                
                     });
                     
                 }                

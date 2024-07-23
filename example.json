@@ -1,0 +1,178 @@
+{
+    "preprocessed": {
+        "steps": {
+            "processedOrder": {
+                "status": "visited",
+                "iconKey": "processedOrder"
+            },
+            "buildInProgress": {
+                "status": "visited",
+                "iconKey": "buildInProgress",
+                "location": "Derbyshire, UNITED KINGDOM"
+            },
+            "leftTheFactory": {
+                "status": "visited",
+                "iconKey": "truck",
+                "location": "Derbyshire, UNITED KINGDOM"
+            },
+            "inTransit": {
+                "status": "current",
+                "iconKey": "vessel",
+                "location": "BRISTOL, UNITED KINGDOM"
+            },
+            "arrivedAtRetailer": {
+                "status": "pending",
+                "iconKey": "destination",
+                "location": "location"
+            }
+        },
+        "map": [
+            {
+                "iconKey": "buildInProgress",
+                "location": {
+                    "lat": 53.1046782,
+                    "lng": -1.5623885
+                },
+                "status": "visited"
+            },
+            {
+                "iconKey": "truck",
+                "location": {
+                    "lat": 53.1046782,
+                    "lng": -1.5623885
+                },
+                "status": "visited"
+            },
+            {
+                "iconKey": "truck",
+                "location": {
+                    "lat": 53.1046782,
+                    "lng": -1.5623885
+                },
+                "status": "visited"
+            },
+            {
+                "iconKey": "vessel",
+                "location": {
+                    "lat": 1,
+                    "lng": 1
+                },
+                "status": "current"
+            },
+            {
+                "iconKey": "truck",
+                "location": {
+                    "lat": 1,
+                    "lng": 1
+                },
+                "status": "pending"
+            },
+            {
+                "iconKey": "destination",
+                "location": {
+                    "lat": 1,
+                    "lng": 1
+                },
+                "status": "pending"
+            }
+        ]
+    },
+    "currentStatus": {
+        "currentStatus": "LeftTheDepot",
+        "callOffStatus": "Called off",
+        "damageCode": "",
+        "isDelayed": null
+    },
+    "intermediateDeliveries": [
+        {
+            "locationCode": "SU.TU.1",
+            "locationName": "Derbyshire",
+            "countryCode": "GB",
+            "countryName": "UNITED KINGDOM",
+            "destinationType": "FACTORY",
+            "transportMethod": "noMovement",
+            "isVisited": "visited",
+            "locationLatitude": 53.1046782,
+            "locationLongitude": -1.5623885,
+            "isLocationFinalDestination": false
+        },
+        {
+            "locationCode": "HB.PA.1",
+            "locationName": "DERBYSHIRE",
+            "countryCode": "GB",
+            "countryName": "UNITED KINGDOM",
+            "destinationType": "HUB",
+            "transportMethod": "noMovement",
+            "isVisited": "visited",
+            "locationLatitude": 53.1046782,
+            "locationLongitude": -1.5623885,
+            "isLocationFinalDestination": false
+        },
+        {
+            "locationCode": "HB.DY.1",
+            "locationName": "DERBYSHIRE",
+            "countryCode": "GB",
+            "countryName": "UNITED KINGDOM",
+            "destinationType": "HUB",
+            "transportMethod": "Truck",
+            "isVisited": "visited",
+            "locationLatitude": 53.1046782,
+            "locationLongitude": -1.5623885,
+            "isLocationFinalDestination": false
+        },
+        {
+            "locationCode": "PT.BRIG.1",
+            "locationName": "BRISTOL",
+            "countryCode": "GB",
+            "countryName": "UNITED KINGDOM",
+            "destinationType": "TRANSIT",
+            "transportMethod": "Vessel",
+            "isVisited": "current",
+            "locationLatitude": 51.454513,
+            "locationLongitude": -2.58791,
+            "isLocationFinalDestination": false
+        },
+        {
+            "locationCode": "locationCode",
+            "locationName": "locationName",
+            "countryCode": "countryCode",
+            "countryName": "countryName",
+            "destinationType": "HUB",
+            "transportMethod": "Truck",
+            "isVisited": "notVisited",
+            "locationLatitude": 1,
+            "locationLongitude": 1,
+            "isLocationFinalDestination": false
+        },
+        {
+            "locationCode": "locationCode",
+            "locationName": "locationName",
+            "countryCode": "countryCode",
+            "countryName": "countryName",
+            "destinationType": "DESTINATION",
+            "transportMethod": "Truck",
+            "isVisited": "notVisited",
+            "locationLatitude": 1,
+            "locationLongitude": 1,
+            "isLocationFinalDestination": false
+        }
+    ],
+    "dealerDetails": {
+        "phone": "111 111 111",
+        "email": "test@test.com",
+        "name": "Name",
+        "address1": "Address1",
+        "address2": "Address2"
+    },
+    "orderDetails": {
+        "orderId": "11111111",
+        "vehicleModel": "Corolla",
+        "vehicleExternalColor": "Gris Ascari",
+        "engine": "200H",
+        "transmission": "e-CVT",
+        "modelCode": "CR",
+        "imageUrl": "https://images.toyota-europe.com/es/vehicle/corolla-hb/78058/width/600/height/300/padding/0/exterior-03_1K6.png",
+        "orderToBeDisplayed": "11111111",
+        "stopped": false
+    }
+}
