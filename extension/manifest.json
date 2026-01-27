@@ -8,7 +8,7 @@
         "activeTab"
     ],
     "content_scripts": [{
-        "matches": ["http://*/*", "https://*/*"],
+        "matches": ["*://*.toyota-europe.com/*", "*://*.toyota.es/*"], 
         "js": ["content.js"],
         "run_at": "document_start"
     }],
