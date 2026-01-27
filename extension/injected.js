@@ -1,33 +1,75 @@
 (function() {
-    console.log("Toyota Tracker: Script v3.0");
-
-    // ==========================================
-    // 1. ESTILOS Y UTILIDADES
-    // ==========================================
+    // Toyota Tracker Extension
+    
     let isMinimized = false;
     let savedOrderData = null;
 
-    // Estilos CSS inyectados para simular el look original pero dentro de nuestro panel
-    const TABLE_STYLE = 'width:100%; border-collapse:collapse; border:1px solid #777; font-family:Arial, sans-serif; font-size:12px; margin-bottom:10px;';
-    const TD_KEY_STYLE = 'background-color:#e0e0e0; padding:4px; font-weight:bold; width:20%; border:1px solid #777;';
-    const TD_VAL_STYLE = 'background-color:#fff; padding:4px; border:1px solid #777; width:30%;';
-    const HEADER_STYLE = 'margin:10px 0 5px 0; font-size:14px; font-weight:bold; color:#333; text-transform:uppercase; border-bottom:1px solid #eb0a1e;';
+    // DEBUG: Expose internal data for inspection
+    window._toyotaTrackerDebug = {
+        rawResponses: [],
+        mergedData: null
+    };
+    
+    console.log("%c Toyota Tracker: Debug Mode Ready. Check window._toyotaTrackerDebug", "color: #eb0a1e; font-weight: bold;");
+
+    // CSS Constants
+    const COLORS = {
+        primary: '#eb0a1e', // Toyota Red
+        dark: '#333333',
+        light: '#f4f4f4',
+        border: '#dddddd',
+        white: '#ffffff',
+        accent: '#e0e0e0'
+    };
+
+    const STYLES = {
+        panel: `
+            position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+            width: 800px; max-height: 85vh; overflow-y: auto;
+            background: ${COLORS.white}; border: 1px solid ${COLORS.border};
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); border-radius: 8px;
+            z-index: 99999; font-family: 'Toyota Type', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: ${COLORS.dark}; font-size: 13px; line-height: 1.5;
+        `,
+        header: `
+            background: ${COLORS.light}; padding: 12px 20px; border-bottom: 1px solid ${COLORS.border};
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 10; border-radius: 8px 8px 0 0;
+        `,
+        sectionHeader: `
+            margin: 20px 0 10px 0; font-size: 14px; font-weight: 700;
+            color: ${COLORS.dark}; text-transform: uppercase; border-bottom: 2px solid ${COLORS.primary}; padding-bottom: 4px;
+        `,
+        table: `width: 100%; border-collapse: collapse; margin-bottom: 15px;`,
+        tdLabel: `
+            background-color: ${COLORS.light}; width: 20%; font-weight: 600;
+            padding: 8px; border: 1px solid ${COLORS.border}; color: #555;
+        `,
+        tdValue: `
+            background-color: ${COLORS.white}; width: 30%;
+            padding: 8px; border: 1px solid ${COLORS.border};
+        `,
+        btn: `
+            cursor: pointer; border: none; background: transparent; 
+            font-weight: bold; font-size: 16px; padding: 0 8px; color: #555;
+        `
+    };
 
     function clearExistingPanel() {
-        if (document.getElementById('toyota-tracker-panel')) document.getElementById('toyota-tracker-panel').remove();
-        if (document.getElementById('toyota-tracker-minimized')) document.getElementById('toyota-tracker-minimized').remove();
+        const panel = document.getElementById('toyota-tracker-panel');
+        const min = document.getElementById('toyota-tracker-minimized');
+        if (panel) panel.remove();
+        if (min) min.remove();
     }
 
-    // ==========================================
-    // 2. INTERCEPTOR 
-    // ==========================================
+    // Network Interceptor (Fetch API)
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
         const response = await originalFetch(...args);
         const clone = response.clone();
         const url = args[0] ? args[0].toString() : "";
         
-        // AÑADIDO: Soporte para 'leads/v2/ordered'
+        // Detects various API endpoints used by Toyota in different regions/versions
         if (url && (
             url.includes("vehicleOrderTracker") || 
             url.includes("/ordered/details/") || 
@@ -36,36 +78,44 @@
         )) {
             clone.json().then(data => {
                 let targetOrder = null;
-                // Lógica de extracción robusta
+                
+                // Robust extraction logic for different API response shapes
                 if (Array.isArray(data) && data.length > 0) targetOrder = data[0];
                 else if (data.payload) targetOrder = Array.isArray(data.payload) ? data.payload[0] : data.payload;
-                else if (data.currentStatus || data.orderDetails || data.id) targetOrder = data; // data.id para el nuevo formato
+                else if (data.currentStatus || data.orderDetails || data.id) targetOrder = data;
 
                 if (targetOrder) {
                     processOrderData(targetOrder, data);
                 }
-            }).catch(e => console.error("Toyota Tracker: JSON Error", e));
+            }).catch(() => {}); // Silent catch to prevent console spam
         }
         return response;
     };
 
-    // ==========================================
-    // 3. PROCESAMIENTO
-    // ==========================================
     function processOrderData(order, rawFull) {
+        // DEBUG: Capture raw data before processing
+        window._toyotaTrackerDebug.rawResponses.push({
+            timestamp: new Date().toISOString(),
+            payload: rawFull
+        });
         
-        // 1. Inicializar estructura base si es la primera vez (Estado Global)
+        console.groupCollapsed("Toyota Tracker: New Data Intercepted");
+        console.log("RAW Full Response:", rawFull);
+        console.log("Extracted Order Object:", order);
+        console.groupEnd();
+
+        // Initialize state to prevent data loss on partial updates
         if (!savedOrderData) {
             savedOrderData = {
-                orderId: "N/A", orderDate: "No disponible",
-                orderStatus: "Desconocido", isComplete: false, isDelayed: false, damageCode: "Sin Daños",
-                callOffStatus: "-", currentStatus: "-", etaAvailable: false, estimatedDelivery: "No disponible",
-                brand: "Toyota", vehicleModel: "Modelo Desconocido", modelCode: "-", engine: "-",
-                suffix: "-", transmission: "-", color: "-", imageUrl: "", vin: "No disponible",
-                urn: "No disponible", katashiki: "No disponible", ssn: "No disponible", nmsc: "No disponible",
-                dealerName: "No disponible", dealerAddress1: "-", dealerAddress2: "-", dealerCountry: "-",
+                orderId: "N/A", orderDate: "-", orderStatus: "-", 
+                isComplete: false, isDelayed: false, damageCode: "-",
+                callOffStatus: "-", currentStatus: "-", etaAvailable: false, estimatedDelivery: "-",
+                brand: "-", vehicleModel: "-", modelCode: "-", engine: "-",
+                suffix: "-", transmission: "-", color: "-", imageUrl: "", vin: "-",
+                urn: "-", katashiki: "-", ssn: "-", nmsc: "-",
+                dealerName: "-", dealerAddress1: "-", dealerAddress2: "", dealerCountry: "-",
                 dealerCode: "-", dealerEmail: "-", dealerPhone: "-",
-                intermediateDeliveries: [], convertedSteps: [], raw: {}
+                intermediateDeliveries: [], convertedSteps: []
             };
         }
 
@@ -74,24 +124,23 @@
         const details = order.orderDetails || {};
         const vehicle = order.vehicle || {};
 
-        // 2. Función de Merge Inteligente
-        // Solo sobrescribe si el nuevo valor es "bueno" y diferente de los valores por defecto "malos"
-        const merge = (key, newVal, invalidList = [null, undefined, "", "N/A", "No disponible", "-", "Modelo Desconocido", "Desconocido"]) => {
-             if (newVal && !invalidList.includes(newVal)) {
+        // Helper to only merge valid values
+        const merge = (key, newVal) => {
+            const invalid = [null, undefined, "", "N/A", "No disponible", "-", "Modelo Desconocido", "Desconocido"];
+             if (newVal && !invalid.includes(newVal)) {
                  savedOrderData[key] = newVal;
              }
         };
 
-        // 3. Mapeo de campos (Merge incremental)
+        // Data Mapping
         merge('orderId', details.orderId || order.orderId || order.id);
-        // Aquí viene el fix principal: 'createdOn' suele venir en la llamada ligera, no lo borramos si la siguiente llamada no lo trae
         merge('orderDate', order.orderDate || order.associationDate || order.creationDate || order.createdOn); 
-        
         merge('orderStatus', order.orderStatus || status.status);
+        
         if (order.isComplete !== undefined) savedOrderData.isComplete = order.isComplete;
         if (status.status === "handover") savedOrderData.isComplete = true;
-
         if (status.isDelayed !== undefined) savedOrderData.isDelayed = status.isDelayed;
+
         merge('damageCode', status.damageCode);
         merge('callOffStatus', status.callOffStatus);
         merge('currentStatus', status.currentStatus || status.status);
@@ -121,13 +170,11 @@
         merge('dealerEmail', dealer.email);
         merge('dealerPhone', dealer.phone);
         
-        // Merge Arrays (Solo si el nuevo tiene datos)
         if (order.intermediateDeliveries && order.intermediateDeliveries.length > 0) {
             savedOrderData.intermediateDeliveries = order.intermediateDeliveries;
         }
 
-        // --- LÓGICA DE FUSIÓN (MAP + STEPS) ---
-        // El usuario indica que 'map' y 'steps' son arrays paralelos (índice 0 con 0, 1 con 1...)
+        // Processing Map/Step logic for newer API versions
         let modernMap = [];
         if (order.preprocessed && order.preprocessed.map) modernMap = order.preprocessed.map;
         else if (status.map) modernMap = status.map;
@@ -142,270 +189,176 @@
              const stepsKeys = Object.keys(stepsObj);
              
              const STEP_TRANSLATIONS = {
-                "processedOrder": "Pedido Procesado",
-                "buildInProgress": "En Fabricación",
-                "leftTheFactory": "Salida de Fábrica",
-                "inTransit": "En Tránsito",
-                "arrivedAtRetailer": "En Concesionario",
-                "handover": "Entregado"
+                "processedOrder": "Processed",
+                "buildInProgress": "In Build",
+                "leftTheFactory": "Left Factory",
+                "inTransit": "In Transit",
+                "arrivedAtRetailer": "At Dealer",
+                "handover": "Handover"
              };
 
              savedOrderData.convertedSteps = modernMap.map((pt, index) => {
-                    // 1. Datos GPS (vienen del objeto map)
-                    const lat = pt.location ? pt.location.lat : pt.lat;
-                    const lng = pt.location ? pt.location.lng : pt.lng;
-                    
-                    // 2. Datos Descriptivos (vienen del objeto steps por índice)
                     const stepData = stepsValues[index] || {};
                     const stepKey = stepsKeys[index] || pt.status;
 
-                    // Nombre: Traducción o clave cruda
-                    const displayName = STEP_TRANSLATIONS[stepKey] || stepKey;
-                    
-                    // Ubicación: Texto del step > Texto del map > "-"
-                    const locationText = stepData.location || (typeof pt.location === 'string' ? pt.location : "-");
-
-                    // Estado: Del step > Del map
-                    const currentStatus = stepData.status || pt.status;
-                    const isVisited = (currentStatus === 'completed' || currentStatus === 'current');
-
                     return {
-                        locationCode: displayName, // Mostramos "En Fabricación" en la columna código
-                        locationName: locationText, // "Toyota City..."
+                        locationCode: STEP_TRANSLATIONS[stepKey] || stepKey,
+                        locationName: stepData.location || (typeof pt.location === 'string' ? pt.location : "-"),
                         destinationType: pt.iconKey || stepData.iconKey || "-",
-                        countryCode: "-",
                         estimatedArrivalDate: pt.eventDate || pt.date || "-",
-                        leftLocationOn: "-",
                         transportMethod: pt.iconKey || "-",
-                        locationLatitude: lat,
-                        locationLongitude: lng,
-                        isVisited: isVisited ? 'Si' : 'No'
+                        locationLatitude: pt.location ? pt.location.lat : pt.lat,
+                        locationLongitude: pt.location ? pt.location.lng : pt.lng,
+                        isVisited: (stepData.status || pt.status) === 'completed' || (stepData.status || pt.status) === 'current' ? 'Yes' : 'No'
                     };
              });
         }
 
-        savedOrderData.raw = rawFull; // Actualizar último RAW para debug
+        // Update global debug state with merged result
+        window._toyotaTrackerDebug.mergedData = savedOrderData;
 
-        if (!isMinimized) renderClassicPanel(savedOrderData);
+        if (!isMinimized) renderPanel(savedOrderData);
     }
 
-    // ==========================================
-    // 4. GENERACIÓN DE HTML 
-    // ==========================================
-    function renderClassicPanel(data) {
+    function renderPanel(data) {
         clearExistingPanel();
         isMinimized = false;
 
         const container = document.createElement('div');
         container.id = 'toyota-tracker-panel';
-        container.style.cssText = `
-            position: fixed; 
-            top: 50px; 
-            left: 50%;
-            transform: translateX(-50%);
-            width: 800px; 
-            background: white; 
-            border: 2px solid #eb0a1e; 
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            z-index: 99999; 
-            max-height: 90vh; 
-            overflow-y: auto;
-            color: #333;
-            font-family: Arial, sans-serif;
-        `;
+        container.style.cssText = STYLES.panel;
 
-        // Construcción de la Hora Actual
         const d = new Date();
-        const ahora = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} @ ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`;
+        const timestamp = `${d.getDate()}/${d.getMonth()+1} @ ${d.getHours()}:${d.getMinutes()}`;
 
-        // Header con Botones
         let html = `
-            <div style="background:#f4f4f4; padding:5px 10px; border-bottom:1px solid #ccc; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0;">
-                <span style="font-weight:bold; color:#eb0a1e;">Toyota Tracker v3.0</span>
+            <div style="${STYLES.header}">
+                <span style="font-weight:700; color:${COLORS.primary};">TOYOTA TRACKER (Unofficial)</span>
                 <div>
-                    <button id="tt-min" style="cursor:pointer; padding:2px 8px;">_</button>
-                    <button id="tt-close" style="cursor:pointer; padding:2px 8px;">X</button>
+                    <button id="tt-min" style="${STYLES.btn}">&#8211;</button>
+                    <button id="tt-close" style="${STYLES.btn}">&times;</button>
                 </div>
             </div>
-            <div style="padding:20px;">
+            <div style="padding: 20px;">
+                <div style="font-size:11px; color:#888; margin-bottom:15px; text-align:right;">Last updated: ${timestamp}</div>
+                
+                <h2 style="${STYLES.sectionHeader}">Order Details</h2>
+                <table style="${STYLES.table}">
+                    <tr>
+                        <td style="${STYLES.tdLabel}">Order ID</td>
+                        <td style="${STYLES.tdValue}">${data.orderId}</td>
+                        <td style="${STYLES.tdLabel}">Order Date</td>
+                        <td style="${STYLES.tdValue}">${data.orderDate}</td>
+                    </tr>
+                    <tr>
+                        <td style="${STYLES.tdLabel}">Order Status</td>
+                        <td style="${STYLES.tdValue}"><strong>${data.orderStatus}</strong></td>
+                        <td style="${STYLES.tdLabel}">Complete</td>
+                        <td style="${STYLES.tdValue}">${data.isComplete ? "Yes" : "No"}</td>
+                    </tr>
+                    <tr>
+                        <td style="${STYLES.tdLabel}">Estimated Delivery</td>
+                        <td style="${STYLES.tdValue}" colspan="3">
+                            <span style="color:${COLORS.primary}; font-weight:bold; font-size:1.1em;">
+                                ${data.estimatedDelivery}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+
+                <h2 style="${STYLES.sectionHeader}">Vehicle Information</h2>
+                <table style="${STYLES.table}">
+                    <tr>
+                        <td style="${STYLES.tdLabel}">Model</td>
+                        <td style="${STYLES.tdValue} font-weight:bold;">${data.vehicleModel}</td>
+                        <td style="${STYLES.tdLabel}">Engine</td>
+                        <td style="${STYLES.tdValue}">${data.engine}</td>
+                    </tr>
+                    <tr>
+                        <td style="${STYLES.tdLabel}">Color</td>
+                        <td style="${STYLES.tdValue}">
+                            ${data.color} 
+                            ${data.imageUrl ? `<a href="${data.imageUrl}" target="_blank" style="float:right; text-decoration:none;">📷</a>` : ''}
+                        </td>
+                        <td style="${STYLES.tdLabel}">VIN</td>
+                        <td style="${STYLES.tdValue}">${data.vin}</td>
+                    </tr>
+                </table>
+
+                <h2 style="${STYLES.sectionHeader}">Dealer</h2>
+                <table style="${STYLES.table}">
+                    <tr>
+                        <td style="${STYLES.tdLabel}">Name</td>
+                        <td style="${STYLES.tdValue}" colspan="3">${data.dealerName}</td>
+                    </tr>
+                    <tr>
+                        <td style="${STYLES.tdLabel}">Contact</td>
+                        <td style="${STYLES.tdValue}" colspan="3">
+                            ${data.dealerPhone ? `📞 ${data.dealerPhone}` : ''} 
+                            ${data.dealerEmail ? `✉️ ${data.dealerEmail}` : ''}
+                        </td>
+                    </tr>
+                </table>
         `;
 
-        html += `
-            <p style="color:red; font-size:12px; margin-top:0;"><strong>¡Atención! Esta pantalla es generada por la extensión (No oficial).</strong></p>
-            <h2 style="${HEADER_STYLE}">Datos Pedido a fecha ${ahora}</h2>
-            
-            <table style="${TABLE_STYLE}">
-                <tr>
-                    <td style="${TD_KEY_STYLE}">ID Pedido</td>
-                    <td style="${TD_VAL_STYLE}">${data.orderId}</td>
-                </tr>
-                <tr>
-                    <td style="${TD_KEY_STYLE}">Fecha Formalización</td>
-                    <td style="${TD_VAL_STYLE}">${data.orderDate}</td>
-                </tr>
-            </table>
-
-            <hr style="border:0; border-top:1px solid #ccc; margin:15px 0;">
-
-            <!-- ESTADO PEDIDO -->
-            <table style="${TABLE_STYLE}">
-                <tr>
-                    <td style="${TD_KEY_STYLE}">Estado Pedido</td>
-                    <td style="${TD_VAL_STYLE}">${data.orderStatus}</td>
-                    <td style="${TD_KEY_STYLE}">Pedido Finalizado</td>
-                    <td style="${TD_VAL_STYLE}">${data.isComplete ? "Si" : "No"}</td>
-                </tr>
-                <tr>
-                    <td style="${TD_KEY_STYLE}">¿Está retrasado?</td>
-                    <td style="${TD_VAL_STYLE}">${data.isDelayed ? "Si" : "No"}</td>
-                    <td style="${TD_KEY_STYLE}">Código de daño</td>
-                    <td style="${TD_VAL_STYLE}">${data.damageCode}</td>
-                </tr>
-                <tr>
-                    <td style="${TD_KEY_STYLE}">callOffStatus</td>
-                    <td style="${TD_VAL_STYLE}">${data.callOffStatus}</td>
-                    <td style="${TD_KEY_STYLE}">Estado Actual</td>
-                    <td style="${TD_VAL_STYLE}">${data.currentStatus}</td>
-                </tr>
-                <tr>
-                    <td style="${TD_KEY_STYLE}">¿Entrega Asignada?</td>
-                    <td style="${TD_VAL_STYLE}">${data.etaAvailable ? "Si" : "No"}</td>
-                    <td style="${TD_KEY_STYLE}">Fecha Estimada</td>
-                    <td style="${TD_VAL_STYLE} font-weight:bold; color:#d32f2f;">${data.estimatedDelivery}</td>
-                </tr>
-            </table>
-
-            <hr style="border:0; border-top:1px solid #ccc; margin:15px 0;">
-
-            <!-- VEHICULO -->
-            <h2 style="${HEADER_STYLE}">Datos del Vehículo</h2>
-            <table style="${TABLE_STYLE}">
-                <tr>
-                    <td style="${TD_KEY_STYLE}">Brand</td>
-                    <td style="${TD_VAL_STYLE}">${data.brand}</td>
-                    <td style="${TD_KEY_STYLE}">Modelo</td>
-                    <td style="${TD_VAL_STYLE} font-weight:bold;">${data.vehicleModel}</td>
-                </tr>
-                <tr>
-                    <td style="${TD_KEY_STYLE}">Codigo Modelo</td>
-                    <td style="${TD_VAL_STYLE}">${data.modelCode}</td>
-                    <td style="${TD_KEY_STYLE}">Motor</td>
-                    <td style="${TD_VAL_STYLE}">${data.engine}</td>
-                </tr>
-                <tr>
-                    <td style="${TD_KEY_STYLE}">Suffix / Puertas</td>
-                    <td style="${TD_VAL_STYLE}">${data.suffix}</td>
-                    <td style="${TD_KEY_STYLE}">Transmision</td>
-                    <td style="${TD_VAL_STYLE}">${data.transmission}</td>
-                </tr>
-                <tr>
-                    <td style="${TD_KEY_STYLE}">Color</td>
-                    <td style="${TD_VAL_STYLE}">${data.color} ${data.imageUrl ? `<a href="${data.imageUrl}" target="_blank" style="color:blue;">[Ver Foto]</a>` : ''}</td>
-                    <td style="${TD_KEY_STYLE}">VIN</td>
-                    <td style="${TD_VAL_STYLE} font-weight:bold;">${data.vin}</td>
-                </tr>
-                <tr>
-                    <td style="${TD_KEY_STYLE}">URN</td>
-                    <td style="${TD_VAL_STYLE}">${data.urn}</td>
-                    <td style="${TD_KEY_STYLE}">Katashiki</td>
-                    <td style="${TD_VAL_STYLE}">${data.katashiki}</td>
-                </tr>
-                <tr>
-                    <td style="${TD_KEY_STYLE}">SSN</td>
-                    <td style="${TD_VAL_STYLE}">${data.ssn}</td>
-                    <td style="${TD_KEY_STYLE}">NMSC</td>
-                    <td style="${TD_VAL_STYLE}">${data.nmsc}</td>
-                </tr>
-            </table>
-
-            <hr style="border:0; border-top:1px solid #ccc; margin:15px 0;">
-
-            <!-- CONCESIONARIO -->
-            <h2 style="${HEADER_STYLE}">Datos Concesionario</h2>
-            <table style="${TABLE_STYLE}">
-                <tr>
-                    <td style="${TD_KEY_STYLE}">Nombre</td>
-                    <td colspan="3" style="${TD_VAL_STYLE}">${data.dealerName}</td>
-                </tr>
-                <tr>
-                    <td style="${TD_KEY_STYLE}">Direccion</td>
-                    <td style="${TD_VAL_STYLE}">${data.dealerAddress1} ${data.dealerAddress2}</td>
-                    <td style="${TD_KEY_STYLE}">Pais</td>
-                    <td style="${TD_VAL_STYLE}">${data.dealerCountry}</td>
-                </tr>
-                <tr>
-                    <td style="${TD_KEY_STYLE}">Dealer Code</td>
-                    <td style="${TD_VAL_STYLE}">${data.dealerCode}</td>
-                    <td style="${TD_KEY_STYLE}">Contacto</td>
-                    <td style="${TD_VAL_STYLE}">${data.dealerEmail} <br> ${data.dealerPhone}</td>
-                </tr>
-            </table>
-
-            <hr style="border:0; border-top:1px solid #ccc; margin:15px 0;">
-        `;
-
-        // TABLA DE PASOS (Steps)
+        // Logistics Map
         const stepsToRender = (data.intermediateDeliveries && data.intermediateDeliveries.length > 0) 
             ? data.intermediateDeliveries 
             : (data.convertedSteps || []);
 
-        if (stepsToRender.length === 0) {
-            html += `<h2 style="${HEADER_STYLE}">El pedido aún no tiene pasos registrados.</h2>`;
-        } else {
+        if (stepsToRender.length > 0) {
             html += `
-                <h2 style="${HEADER_STYLE}">Pasos del Pedido (Ruta Logística)</h2>
-                <table style="width:100%; border-collapse:collapse; font-size:11px; border:1px solid #ccc;">
-                    <tr style="background-color:LightGray; font-weight:bold; text-align:left;">
-                        <th style="padding:5px; border:1px solid #999;">Código</th>
-                        <th style="padding:5px; border:1px solid #999;">Nombre / Ubicación</th>
-                        <th style="padding:5px; border:1px solid #999;">Tipo</th>
-                        <th style="padding:5px; border:1px solid #999;">Fecha</th>
-                        <th style="padding:5px; border:1px solid #999;">Transp.</th>
-                        <th style="padding:5px; border:1px solid #999;">Lat</th>
-                        <th style="padding:5px; border:1px solid #999;">Long</th>
-                        <th style="padding:5px; border:1px solid #999;">Visitado</th>
-                    </tr>
+                <h2 style="${STYLES.sectionHeader}">Logistics Journey</h2>
+                <table style="width:100%; border-collapse:collapse; font-size:12px; border:1px solid #ccc;">
+                    <thead style="background:#f9f9f9; text-align:left;">
+                        <tr>
+                            <th style="padding:8px; border-bottom:2px solid #ddd;">Status</th>
+                            <th style="padding:8px; border-bottom:2px solid #ddd;">Location</th>
+                            <th style="padding:8px; border-bottom:2px solid #ddd;">Date</th>
+                            <th style="padding:8px; border-bottom:2px solid #ddd; text-align:center;">Map</th>
+                        </tr>
+                    </thead>
+                    <tbody>
             `;
 
             stepsToRender.forEach(e => {
-                // Preparamos enlace a mapas si hay coordenadas
                 const lat = e.locationLatitude || e.lat || 0;
                 const lng = e.locationLongitude || e.lng || 0;
                 const hasMap = (lat !== 0 && lng !== 0);
-                const googleMapLink = hasMap ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : null;
-                
-                const latDisplay = hasMap && googleMapLink ? `<a href="${googleMapLink}" target="_blank" style="color:blue;">${lat}</a>` : (lat || "-");
-                const lngDisplay = hasMap && googleMapLink ? `<a href="${googleMapLink}" target="_blank" style="color:blue;">${lng}</a>` : (lng || "-");
+                const googleMapLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+                const rowStyle = e.isVisited === 'Yes' || e.isVisited === true ? '' : 'color:#999;';
 
                 html += `
-                    <tr>
-                        <td style="padding:4px; border:1px solid #ccc;">${e.locationCode || e.status || "-"}</td>
-                        <td style="padding:4px; border:1px solid #ccc;">${e.locationName || e.location || "-"}</td>
-                        <td style="padding:4px; border:1px solid #ccc;">${e.destinationType || "-"}</td>
-                        <td style="padding:4px; border:1px solid #ccc;">${e.estimatedArrivalDate || e.eventDate || "-"}</td>
-                        <td style="padding:4px; border:1px solid #ccc;">${e.transportMethod || "-"}</td>
-                        <td style="padding:4px; border:1px solid #ccc;">${latDisplay}</td>
-                        <td style="padding:4px; border:1px solid #ccc;">${lngDisplay}</td>
-                        <td style="padding:4px; border:1px solid #ccc;">${e.isVisited}</td>
+                    <tr style="border-bottom:1px solid #eee; ${rowStyle}">
+                        <td style="padding:8px;">${e.locationCode || e.status || "-"}</td>
+                        <td style="padding:8px;">${e.locationName || e.location || "-"}</td>
+                        <td style="padding:8px;">${e.estimatedArrivalDate || e.eventDate || "-"}</td>
+                        <td style="padding:8px; text-align:center;">
+                            ${hasMap ? `<a href="${googleMapLink}" target="_blank" style="text-decoration:none;">📍</a>` : '-'}
+                        </td>
                     </tr>
                 `;
             });
-            html += '</table>';
+            html += '</tbody></table>';
         }
 
         html += `
-            <div style="margin-top:20px; text-align:right;">
-                <button onclick="(() => { const el = document.getElementById('tt-debug-ta'); el.style.display = el.style.display==='none'?'block':'none'; })()" style="font-size:10px;">🔍 DEBUG JSON</button>
-                <textarea id="tt-debug-ta" style="display:none; width:100%; height:150px; font-size:10px; font-family:monospace; margin-top:5px;">${JSON.stringify(data.raw, null, 2)}</textarea>
+            <div style="margin-top: 20px; padding-top: 10px; border-top: 1px dashed #eee; text-align: right;">
+                 <button id="tt-debug-btn" style="${STYLES.btn}; font-size:11px; color:#999;" title="Log raw JSON and merged data to console">🛠 Debug Data</button>
             </div>
-            </div>`;
-
+        </div>`; // Close padding div
         container.innerHTML = html;
         document.body.appendChild(container);
 
-        // Handlers
         document.getElementById('tt-close').onclick = () => container.remove();
         document.getElementById('tt-min').onclick = () => showMinimizedPanel();
+        
+        document.getElementById('tt-debug-btn').onclick = () => {
+             console.log("== TOYOTA TRACKER DEBUG ==");
+             console.log("MERGED DATA (Displayed):", savedOrderData);
+             console.log("RAW HISTORY:", window._toyotaTrackerDebug.rawResponses);
+             alert("Data logged to console. Press F12 to view.");
+        };
     }
 
     function showMinimizedPanel() {
@@ -415,14 +368,19 @@
         const min = document.createElement('div');
         min.id = 'toyota-tracker-minimized';
         min.style.cssText = `
-            position: fixed; top: 10px; right: 10px;
-            background: #eb0a1e; color: white;
-            padding: 10px 20px; font-weight:bold; cursor:pointer;
-            z-index:99999; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.3);
+            position: fixed; top: 80px; right: 0;
+            background: ${COLORS.primary}; color: white;
+            padding: 12px 15px 12px 20px; font-weight:bold; cursor:pointer;
+            z-index:99999; border-radius: 20px 0 0 20px; 
+            box-shadow: -2px 2px 10px rgba(0,0,0,0.2); 
+            font-family: sans-serif;
+            transition: transform 0.2s;
         `;
-        min.innerText = "🚗 Abrir Toyota Tracker";
-        min.onclick = () => { if(savedOrderData) renderClassicPanel(savedOrderData); };
+        min.innerHTML = "🚗";
+        min.title = "Open Toyota Tracker";
+        min.onmouseover = () => min.style.transform = "translateX(-5px)";
+        min.onmouseout = () => min.style.transform = "translateX(0)";
+        min.onclick = () => { if(savedOrderData) renderPanel(savedOrderData); };
         document.body.appendChild(min);
     }
-    
 })();
